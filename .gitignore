@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# cloudflare / opennext build output
+/.open-next/
+/.wrangler/
+/dist-cf/
+/assets/
+/deploy.json
+
+# freebuff workspace metadata
+/.freebuff/

@@ -1,0 +1,18 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"main": ".open-next/worker.js",
+	"name": "fabricverse",
+	"compatibility_date": "2026-09-01",
+	// allow_eval_during_startup: Next.js's server runtime builds functions
+	// dynamically at module init, which workerd blocks by default. This flag
+	// permits eval only during startup; runtime eval stays disabled.
+	// nodejs_compat covers the Node API surface.
+	"compatibility_flags": ["nodejs_compat", "allow_eval_during_startup"],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"observability": {
+		"enabled": true
+	}
+}
