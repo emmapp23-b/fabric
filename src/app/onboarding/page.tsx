@@ -17,9 +17,9 @@ const SLIDES = [
 ];
 
 const VIDEOS = [
-  { dur: "00:28", tint: "from-fv-purple/50 to-fv-pink/30" },
-  { dur: "00:45", tint: "from-fv-pink/50 to-amber-500/30", price: "₦8,500" },
-  { dur: "00:32", tint: "from-sky-500/40 to-fv-purple/30" },
+  { dur: "00:28", tint: "from-fv-purple/50 to-fv-pink/30", img: "/img/onb-1.jpg" },
+  { dur: "00:45", tint: "from-fv-pink/50 to-amber-500/30", price: "₦8,500", img: "/img/onb-2.jpg" },
+  { dur: "00:32", tint: "from-sky-500/40 to-fv-purple/30", img: "/img/onb-3.jpg" },
 ];
 
 export default function OnboardingPage() {
@@ -31,7 +31,9 @@ export default function OnboardingPage() {
 
   return (
     <Screen className="relative">
-      {/* No stock photos — brand gradient backdrop */}
+      {/* Fabric backdrop + brand gradient */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/img/onb-bg.jpg" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover opacity-30" />
       <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(168,85,247,0.30),transparent_60%)]" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-fv-bg/70 to-fv-bg" />
       <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-fv-bg via-fv-bg/90 to-transparent" />
@@ -69,7 +71,14 @@ export default function OnboardingPage() {
                       : "h-[142px] w-[100px] border-white/25"
                   }`}
               >
-                <LogoMark className={center ? "h-14 w-14 opacity-60" : "h-10 w-10 opacity-60"} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={v.img}
+                  alt=""
+                  className={`absolute inset-0 h-full w-full object-cover ${center ? "" : "opacity-80"}`}
+                />
+                <div className={`absolute inset-0 bg-gradient-to-br ${v.tint} mix-blend-soft-light`} />
+                <LogoMark className={`relative ${center ? "h-14 w-14" : "h-10 w-10"} opacity-90 drop-shadow-lg`} />
                 <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent" />
                 <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/55 px-2 py-1 backdrop-blur-sm">
                   <Play className="h-3 w-3 fill-white text-white" />
