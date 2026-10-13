@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { BottomNav, Logo, Screen } from "@/components/ui";
 import { RequireAuth } from "@/components/require-auth";
+import { PwaRows } from "@/components/pwa";
 import { useAuth } from "@/lib/auth";
 import { useShop } from "@/lib/cart";
 
@@ -134,6 +135,9 @@ export default function ProfilePage() {
             <ArrowRight className="h-5 w-5 text-fv-muted" />
           </button>
         </div>
+
+        {/* Push notifications + install app */}
+        <PwaRows />
 
         <BottomNav active="profile" />
       </Screen>

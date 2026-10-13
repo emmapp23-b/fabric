@@ -31,12 +31,12 @@ export default function OnboardingPage() {
 
   return (
     <Screen className="relative">
-      {/* Fabric backdrop + brand gradient */}
+      {/* Brand fabric backdrop (supplied artwork) + legibility gradients */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/img/onb-bg.jpg" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover opacity-30" />
-      <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(168,85,247,0.30),transparent_60%)]" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-fv-bg/70 to-fv-bg" />
-      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-fv-bg via-fv-bg/90 to-transparent" />
+      <img src="/img/onboarding-bg.jpg" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover object-center" />
+      <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(168,85,247,0.25),transparent_60%)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-fv-bg/35 to-fv-bg/95" />
+      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-fv-bg via-fv-bg/70 to-transparent" />
 
       <div className="relative flex min-h-[100dvh] flex-col">
 

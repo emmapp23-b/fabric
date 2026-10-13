@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Flame, Search, ShoppingCart, SlidersHorizontal, Star, Heart, ShoppingBag, Radio, Clapperboard } from "lucide-react";
 import { BottomNav, Logo, Media, Screen, SectionHead } from "@/components/ui";
 import { RequireAuth } from "@/components/require-auth";
+import { PushOptIn } from "@/components/pwa";
 import { naira, useBanners, useCategories, useProducts, useReels } from "@/lib/data";
 import { useShop } from "@/lib/cart";
 
@@ -42,6 +43,9 @@ export default function HomePage() {
           )}
         </Link>
       </header>
+
+      {/* Push notifications opt-in */}
+      <PushOptIn />
 
       {/* Search */}
       <div className="px-5 pb-3">

@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
 import { ShopProvider } from "@/lib/cart";
+import { PwaSetup } from "@/components/pwa";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,6 +19,22 @@ export const metadata: Metadata = {
   title: "FabricVerse — Discover. Shop. Repeat.",
   description:
     "Shop premium fabrics from businesses and individuals. Follow your style. Support real people.",
+  // Installable as an app on iPhone (Add to Home Screen) and Android.
+  appleWebApp: {
+    capable: true,
+    title: "FabricVerse",
+    statusBarStyle: "black",
+  },
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#070a13",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -28,7 +45,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-fv-bg">
         <AuthProvider>
-          <ShopProvider>{children}</ShopProvider>
+          <ShopProvider>
+            {children}
+            <PwaSetup />
+          </ShopProvider>
         </AuthProvider>
       </body>
     </html>

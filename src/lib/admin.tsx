@@ -23,12 +23,17 @@ export function useAdmin() {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [canBootstrap, setCanBootstrap] = useState(false);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !user) {
-      setIsAdmin(false);
-      setChecking(false);
-      return;
+      // Defer off the effect body — state must not be written synchronously.
+      const timer = setTimeout(() => {
+        setIsAdmin(false);
+        setCanBootstrap(false);
+        setChecking(false);
+      }, 0);
+      return () => clearTimeout(timer);
     }
     let cancelled = false;
     (async () => {
@@ -39,6 +44,18 @@ export function useAdmin() {
         const snap = await getDoc(doc(await fbDb(), "users", user.uid));
         const role = snap.exists() ? (snap.data() as { role?: string }).role : undefined;
         if (!cancelled) setIsAdmin(emailAllow || role === "admin");
+
+        // Self-service bootstrap: if the allowlist env is empty AND not a
+        // single admin exists yet, the next signed-in user may claim admin
+        // from the blocked screen. One-shot — once anyone is admin, the
+        // button disappears for everyone else.
+        if (!cancelled && !emailAllow && role !== "admin" && adminEmails.length === 0) {
+          const { collection, getDocs, limit, query, where } = await import("firebase/firestore");
+          const admins = await getDocs(
+            query(collection(await fbDb(), "users"), where("role", "==", "admin"), limit(1)),
+          );
+          if (!cancelled) setCanBootstrap(admins.empty);
+        }
       } catch {
         if (!cancelled) setIsAdmin(emailAllow);
       } finally {
@@ -50,12 +67,35 @@ export function useAdmin() {
     };
   }, [user]);
 
-  return { isAdmin, checking };
+  return { isAdmin, checking, canBootstrap };
+}
+
+/** Claims admin for the signed-in user (only offered when no admin exists). */
+export async function claimAdmin(uid: string): Promise<void> {
+  const { doc, setDoc } = await import("firebase/firestore");
+  await setDoc(doc(await fbDb(), "users", uid), { role: "admin" }, { merge: true });
 }
 
 /** Blocks the admin UI for non-admins. */
 export function RequireAdmin({ children }: { children: ReactNode }) {
-  const { isAdmin, checking } = useAdmin();
+  const { user } = useAuth();
+  const { isAdmin, checking, canBootstrap } = useAdmin();
+  const [claiming, setClaiming] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+
+  async function onClaim() {
+    if (!user || claiming) return;
+    setClaiming(true);
+    setClaimError(null);
+    try {
+      await claimAdmin(user.uid);
+      // Force a re-check by reloading — simplest way to refresh the gate.
+      window.location.reload();
+    } catch {
+      setClaimError("Couldn't update your account. Check your Firestore security rules.");
+      setClaiming(false);
+    }
+  }
 
   if (checking) {
     return (
@@ -74,9 +114,32 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
         <div className="w-full max-w-sm rounded-2xl border border-fv-line bg-fv-panel p-8 text-center">
           <p className="text-lg font-extrabold">Admins only</p>
           <p className="mt-2 text-sm text-fv-muted">
-            Your account doesn&apos;t have admin access. Sign in with an admin
-            account or add your email to <code className="text-fv-pink">NEXT_PUBLIC_ADMIN_EMAILS</code>.
+            This account{user?.email ? ` (${user.email})` : ""} doesn&apos;t have admin
+            access yet.
           </p>
+
+          {canBootstrap ? (
+            <div className="mt-4">
+              <p className="text-xs leading-relaxed text-fv-muted">
+                No admin exists yet — you appear to be the first user, so you
+                can set this account up as the admin.
+              </p>
+              <button
+                onClick={onClaim}
+                disabled={claiming}
+                className="mt-3 w-full rounded-full bg-fv-pink py-2.5 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-50"
+              >
+                {claiming ? "Setting up…" : "Make this account the admin"}
+              </button>
+              {claimError && <p className="mt-2 text-xs text-amber-300/90">{claimError}</p>}
+            </div>
+          ) : (
+            <p className="mt-3 text-xs leading-relaxed text-fv-muted">
+              Sign in with the admin account, or add your email to{" "}
+              <code className="text-fv-pink">NEXT_PUBLIC_ADMIN_EMAILS</code> in
+              Vercel and redeploy.
+            </p>
+          )}
         </div>
       </div>
     );

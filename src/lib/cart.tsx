@@ -11,10 +11,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { useAuth } from "./auth";
+import { pushNotify } from "./push";
 import { MIN_YARDS, type Product } from "./data";
 
 export interface CartLine {
@@ -53,19 +55,29 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw) as { cart?: CartLine[]; favorites?: string[] };
-        setCart(Array.isArray(parsed.cart) ? parsed.cart : []);
-        setFavorites(Array.isArray(parsed.favorites) ? parsed.favorites : []);
-        return;
+    // Restore in a microtask: the state must not be written synchronously
+    // inside the effect body (and this keeps SSR/hydration behaviour intact).
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      let cartLines: CartLine[] = [];
+      let favs: string[] = [];
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { cart?: CartLine[]; favorites?: string[] };
+          cartLines = Array.isArray(parsed.cart) ? parsed.cart : [];
+          favs = Array.isArray(parsed.favorites) ? parsed.favorites : [];
+        }
+      } catch {
+        /* corrupted storage → start clean */
       }
-    } catch {
-      /* corrupted storage → start clean */
-    }
-    setCart([]);
-    setFavorites([]);
+      setCart(cartLines);
+      setFavorites(favs);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [key]);
 
   useEffect(() => {
@@ -75,6 +87,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       /* storage full/blocked — non-fatal */
     }
   }, [key, cart, favorites]);
+
+  // The add-to-cart notify targets this user's other devices; a ref keeps
+  // the callback memoized on [] as before.
+  const uidRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    uidRef.current = user?.uid;
+  }, [user]);
 
   const addToCart = useCallback((p: Product, yards = MIN_YARDS) => {
     const y = Math.max(MIN_YARDS, Math.round(yards));
@@ -89,6 +108,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         { id: p.id, name: p.name, spec: p.spec, pricePerYard: p.price, img: p.img, yards: y },
       ];
     });
+    // Cross-device nudge: the signed-in user's other devices get the alert.
+    if (uidRef.current) {
+      void pushNotify(
+        { title: "Added to cart 🛒", body: `${p.name} — ${y} yd saved in your cart`, url: "/cart", tag: "cart" },
+        { uid: uidRef.current },
+      );
+    }
   }, []);
 
   const setYards = useCallback((id: string, yards: number) => {

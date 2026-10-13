@@ -14,6 +14,7 @@
  */
 
 import { fbDb } from "./firebase";
+import { pushNotify } from "./push";
 import type { DeliveryInfo, OrderItem, OrderStatus, Product } from "./data";
 
 /** Lazily loads the firestore helpers + db handle in one shot (browser only). */
@@ -147,6 +148,26 @@ export async function createDeliveryQuote(input: {
     quoteId: ref.id,
   });
 
+  // Notify the customer who owns this order — the delivery price is set.
+  try {
+    const { doc, getDoc, db: db2 } = await fs();
+    const orderSnap = await getDoc(doc(db2, "orders", input.orderId));
+    const o = orderSnap.exists() ? (orderSnap.data() as { customerId?: string; code?: string }) : null;
+    if (o?.customerId) {
+      void pushNotify(
+        {
+          title: "Delivery price ready 🚚",
+          body: `Delivery for ${o.code ?? "your order"} is ₦${customerDeliveryFee.toLocaleString()}. Review and pay before it expires.`,
+          url: `/orders/${input.orderId}`,
+          tag: "quote",
+        },
+        { uid: o.customerId },
+      );
+    }
+  } catch {
+    /* never block the quote on a notification */
+  }
+
   return ref.id;
 }
 
@@ -205,6 +226,8 @@ export async function createProduct(p: ProductInput): Promise<string> {
     reviews: 0,
     createdAt: Date.now(),
   });
+  // Broadcast: every subscribed device gets the new-product alert.
+  void pushNotify({ title: "New product just dropped 🛍️", body: p.name, url: `/product/${ref.id}`, tag: "product" });
   return ref.id;
 }
 
@@ -255,12 +278,24 @@ export async function toggleLiveLike(sessionId: string, uid: string, liked: bool
 
 /** Ensure the live session doc exists (idempotent). */
 export async function ensureLiveSession(sessionId: string, data: { title: string; sellerName: string; featuredProductId?: string }): Promise<void> {
-  const { doc, setDoc, db } = await fs();
+  const { doc, setDoc, getDoc, db } = await fs();
+  const ref = doc(db, "liveSessions", sessionId);
+  const before = await getDoc(ref).catch(() => null);
+  const wasActive = before?.exists() ? Boolean((before.data() as { active?: boolean }).active) : false;
   await setDoc(
-    doc(db, "liveSessions", sessionId),
+    ref,
     { active: true, likedBy: [], ...data },
     { merge: true },
   );
+  // Broadcast only when the session (re)starts, never on ordinary visits.
+  if (!wasActive) {
+    void pushNotify({
+      title: "🔴 We're LIVE",
+      body: `${data.sellerName}: ${data.title}`,
+      url: "/live",
+      tag: "live",
+    });
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -400,6 +435,12 @@ export async function createReel(input: {
     shares: 0,
     views: 0,
     createdAt: Date.now(),
+  });
+  void pushNotify({
+    title: "New reel 🎬",
+    body: input.caption || `${input.sellerName} posted a new reel`,
+    url: "/reels",
+    tag: "reel",
   });
   return ref.id;
 }
