@@ -1,4 +1,4 @@
-import { createHmac } from "crypto";
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 
 /**
@@ -22,7 +22,10 @@ function sign(params: Record<string, string | number>): string {
     .sort()
     .map((k) => `${k}=${params[k]}`)
     .join("&");
-  return createHmac("sha1", SECRET!).update(toSign).digest("hex");
+  // Cloudinary's signature is SHA-1(string_to_sign + api_secret) —
+  // the secret is concatenated directly, NOT used as an HMAC key.
+  // (Using createHmac here made every upload fail with "Invalid Signature".)
+  return createHash("sha1").update(toSign + SECRET!, "utf8").digest("hex");
 }
 
 export async function POST(req: Request) {
